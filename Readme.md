@@ -1,0 +1,1 @@
+A kubectl or Kubernetes Command Line Tool based plugin that visualizes resources, analyzes costs, and provides optimization recommendations. 
