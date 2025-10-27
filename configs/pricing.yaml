@@ -1,0 +1,12 @@
+pricing:
+  # Cost per CPU core per hour (in USD)
+  cpu_hourly: 0.024  # ~$17.28/month per core
+  
+  # Cost per GB memory per hour (in USD)
+  memory_gb_hourly: 0.003  # ~$2.16/month per GB
+  
+  # Cost per GPU per hour (in USD)
+  gpu_hourly: 0.90  # ~$648/month per GPU (T4)
+  
+  # Cost per GB storage per month (in USD)
+  storage_gb_monthly: 0.10  # ~$0.10/month per GB
