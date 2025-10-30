@@ -1,7 +1,7 @@
 package main
 
 import (
-	"kubectl-cost/cmd"
+	"kcavo/cmd"
 	"os"
 )
 

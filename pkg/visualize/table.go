@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"kubectl-cost/pkg/cost"
-	"kubectl-cost/pkg/gpu"
+	"kcavo/pkg/cost"
+	"kcavo/pkg/gpu"
 
 	"github.com/olekukonko/tablewriter"
 	"gopkg.in/yaml.v3"

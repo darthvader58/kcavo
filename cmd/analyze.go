@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"kubectl-cost/pkg/cost"
-	"kubectl-cost/pkg/kubernetes"
-	"kubectl-cost/pkg/visualize"
+	"kcavo/pkg/cost"
+	"kcavo/pkg/kubernetes"
+	"kcavo/pkg/visualize"
 
 	"github.com/spf13/cobra"
 )
@@ -54,7 +54,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 
 	ns := getNamespace()
-	
+
 	fmt.Printf("🔍 Analyzing costs")
 	if ns == "" {
 		fmt.Printf(" across all namespaces...\n")

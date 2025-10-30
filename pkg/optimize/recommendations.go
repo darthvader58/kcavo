@@ -2,7 +2,7 @@ package optimize
 
 import (
 	"fmt"
-	"kubectl-cost/pkg/cost"
+	"kcavo/pkg/cost"
 
 	corev1 "k8s.io/api/core/v1"
 )

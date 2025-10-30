@@ -5,7 +5,7 @@
 
 set -e  # Exit on error
 
-echo "🚀 kubectl-cost Installation Script"
+echo "🚀 kcavo Installation Script"
 echo "===================================="
 echo ""
 
@@ -55,10 +55,10 @@ echo "✅ Dependencies verified"
 echo ""
 
 # Step 5: Build the binary
-echo "🔨 Building kubectl-cost..."
+echo "🔨 Building kcavo..."
 mkdir -p bin
-go build -v -o bin/kubectl-cost .
-echo "✅ Build complete: bin/kubectl-cost"
+go build -v -o bin/kcavo .
+echo "✅ Build complete: bin/kcavo"
 echo ""
 
 # Step 6: Install (optional)
@@ -66,9 +66,9 @@ read -p "📦 Install to ~/.local/bin? (y/n) " -n 1 -r
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     mkdir -p ~/.local/bin
-    cp bin/kubectl-cost ~/.local/bin/
-    chmod +x ~/.local/bin/kubectl-cost
-    echo "✅ Installed to ~/.local/bin/kubectl-cost"
+    cp bin/kcavo ~/.local/bin/
+    chmod +x ~/.local/bin/kcavo
+    echo "✅ Installed to ~/.local/bin/kcavo"
     echo ""
     
     # Check if ~/.local/bin is in PATH
@@ -84,9 +84,9 @@ echo ""
 
 # Step 7: Test the installation
 echo "🧪 Testing installation..."
-if [ -f bin/kubectl-cost ]; then
-    ./bin/kubectl-cost --version
-    echo "✅ kubectl-cost is working!"
+if [ -f bin/kcavo ]; then
+    ./bin/kcavo --version
+    echo "✅ kcavo is working!"
 else
     echo "❌ Build failed"
     exit 1

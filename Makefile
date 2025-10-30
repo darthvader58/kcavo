@@ -1,6 +1,6 @@
 .PHONY: build install test clean lint help
 
-BINARY_NAME=kubectl-cost
+BINARY_NAME=kcavo
 BUILD_DIR=bin
 INSTALL_PATH=$(HOME)/.local/bin
 
@@ -72,7 +72,7 @@ try:
 
 # Display help
 help:
-	@echo "kubectl-cost - Kubernetes Cost Analysis Plugin"
+	@echo "Kcavo - Kubernetes Cost Analysis Plugin"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  build       - Build the plugin binary"

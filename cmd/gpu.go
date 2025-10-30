@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"kubectl-cost/pkg/gpu"
-	"kubectl-cost/pkg/kubernetes"
-	"kubectl-cost/pkg/visualize"
+	"kcavo/pkg/gpu"
+	"kcavo/pkg/kubernetes"
+	"kcavo/pkg/visualize"
 
 	"github.com/spf13/cobra"
 )
@@ -41,7 +41,7 @@ func runGPU(cmd *cobra.Command, args []string) error {
 	}
 
 	ns := getNamespace()
-	
+
 	fmt.Printf("🎮 Analyzing GPU resources...\n\n")
 
 	// Get nodes with GPUs

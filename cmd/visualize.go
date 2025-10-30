@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"kubectl-cost/pkg/kubernetes"
-	"kubectl-cost/pkg/visualize"
+	"kcavo/pkg/kubernetes"
+	"kcavo/pkg/visualize"
 
 	"github.com/spf13/cobra"
 )
