@@ -125,6 +125,6 @@ Monthly Cost = (CPU_cores × CPU_rate + Memory_GB × Memory_rate + GPU_count × 
 ```
 
 ## Acknowledgements
-https://github.com/spf13/cobra for CLI.
-https://github.com/olekukonko/tablewriter for the tables.
+- https://github.com/spf13/cobra for CLI.
+- https://github.com/olekukonko/tablewriter for the tables.
 
