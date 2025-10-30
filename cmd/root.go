@@ -16,7 +16,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "kubectl-cost",
+	Use:   "kcavo",
 	Short: "Kubernetes cost analysis and optimization tool",
 	Long: `kubectl-cost is a kubectl plugin that helps you:
   • Visualize resource usage across your cluster
@@ -56,7 +56,7 @@ func initConfig() {
 
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".kubectl-cost")
+		viper.SetConfigName(".kcavo")
 	}
 
 	viper.AutomaticEnv()
