@@ -1,4 +1,4 @@
-module kubectl-cost
+module kcavo
 
 go 1.25.3
 
