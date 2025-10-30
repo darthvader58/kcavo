@@ -13,7 +13,7 @@ make install
 kubectl cost --version
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Analyze costs in current namespace
