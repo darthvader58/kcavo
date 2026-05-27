@@ -1,6 +1,8 @@
 package gpu
 
 import (
+	"kcavo/pkg/cost"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -48,9 +50,22 @@ func (a *Analyzer) Analyze(nodes []corev1.Node, pods []corev1.Pod) Analysis {
 		Recommendations: make([]string, 0),
 	}
 
+	allocatedByNode := make(map[string]int, len(nodes))
+	for _, pod := range pods {
+		if pod.Status.Phase != corev1.PodRunning {
+			continue
+		}
+
+		podGPU := a.analyzePod(pod)
+		if podGPU.GPUCount > 0 {
+			analysis.Pods = append(analysis.Pods, podGPU)
+			allocatedByNode[pod.Spec.NodeName] += podGPU.GPUCount
+		}
+	}
+
 	// Analyze nodes
 	for _, node := range nodes {
-		nodeGPU := a.analyzeNode(node)
+		nodeGPU := a.analyzeNode(node, allocatedByNode[node.Name])
 		if nodeGPU.TotalGPUs > 0 {
 			analysis.Nodes = append(analysis.Nodes, nodeGPU)
 			analysis.TotalGPUs += nodeGPU.TotalGPUs
@@ -58,15 +73,10 @@ func (a *Analyzer) Analyze(nodes []corev1.Node, pods []corev1.Pod) Analysis {
 		}
 	}
 
-	// Analyze pods
-	for _, pod := range pods {
-		podGPU := a.analyzePod(pod)
-		if podGPU.GPUCount > 0 {
-			analysis.Pods = append(analysis.Pods, podGPU)
-		}
-	}
-
 	analysis.AvailableGPUs = analysis.TotalGPUs - analysis.AllocatedGPUs
+	if analysis.AvailableGPUs < 0 {
+		analysis.AvailableGPUs = 0
+	}
 	if analysis.TotalGPUs > 0 {
 		analysis.UtilizationPct = (float64(analysis.AllocatedGPUs) / float64(analysis.TotalGPUs)) * 100
 	}
@@ -77,21 +87,21 @@ func (a *Analyzer) Analyze(nodes []corev1.Node, pods []corev1.Pod) Analysis {
 	return analysis
 }
 
-func (a *Analyzer) analyzeNode(node corev1.Node) NodeGPU {
+func (a *Analyzer) analyzeNode(node corev1.Node, allocatedGPUs int) NodeGPU {
 	nodeGPU := NodeGPU{
-		NodeName: node.Name,
-		GPUType:  "Unknown",
+		NodeName:      node.Name,
+		GPUType:       "Unknown",
+		AllocatedGPUs: allocatedGPUs,
 	}
 
 	// Get total GPUs from capacity
-	if gpu, ok := node.Status.Capacity["nvidia.com/gpu"]; ok {
+	if gpu, ok := node.Status.Capacity[cost.NVIDIAResourceGPU]; ok {
 		nodeGPU.TotalGPUs = int(gpu.Value())
 	}
 
-	// Get allocated GPUs from allocatable (capacity - allocated = available)
-	if gpu, ok := node.Status.Allocatable["nvidia.com/gpu"]; ok {
-		nodeGPU.AvailableGPUs = int(gpu.Value())
-		nodeGPU.AllocatedGPUs = nodeGPU.TotalGPUs - nodeGPU.AvailableGPUs
+	nodeGPU.AvailableGPUs = nodeGPU.TotalGPUs - nodeGPU.AllocatedGPUs
+	if nodeGPU.AvailableGPUs < 0 {
+		nodeGPU.AvailableGPUs = 0
 	}
 
 	// Try to detect GPU type from node labels
@@ -113,10 +123,11 @@ func (a *Analyzer) analyzePod(pod corev1.Pod) PodGPU {
 
 	// Count GPUs across all containers
 	for _, container := range pod.Spec.Containers {
-		if gpu, ok := container.Resources.Requests["nvidia.com/gpu"]; ok {
+		if gpu, ok := container.Resources.Requests[cost.NVIDIAResourceGPU]; ok {
 			podGPU.GPUCount += int(gpu.Value())
+			continue
 		}
-		if gpu, ok := container.Resources.Limits["nvidia.com/gpu"]; ok {
+		if gpu, ok := container.Resources.Limits[cost.NVIDIAResourceGPU]; ok {
 			podGPU.GPUCount += int(gpu.Value())
 		}
 	}

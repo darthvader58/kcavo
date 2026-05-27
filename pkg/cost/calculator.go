@@ -7,6 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+const NVIDIAResourceGPU corev1.ResourceName = "nvidia.com/gpu"
+
 // PodCost represents the cost breakdown for a pod
 type PodCost struct {
 	Name       string
@@ -21,6 +23,11 @@ type PodCost struct {
 	MemRequest string
 	CPULimit   string
 	MemLimit   string
+}
+
+// PodKey uniquely identifies a pod within a cluster.
+func PodKey(namespace, name string) string {
+	return namespace + "/" + name
 }
 
 // Calculator handles cost calculations
@@ -83,13 +90,7 @@ func (c *Calculator) calculatePodCost(pod corev1.Pod) PodCost {
 			memLimit.Add(lim)
 		}
 
-		// Check for GPU requests
-		if gpu, ok := container.Resources.Requests["nvidia.com/gpu"]; ok {
-			gpuCount += int(gpu.Value())
-		}
-		if gpu, ok := container.Resources.Limits["nvidia.com/gpu"]; ok {
-			gpuCount += int(gpu.Value())
-		}
+		gpuCount += containerGPUCount(container)
 	}
 
 	// Calculate costs based on requests (or limits if requests not set)
@@ -120,6 +121,16 @@ func (c *Calculator) calculatePodCost(pod corev1.Pod) PodCost {
 		CPULimit:   cpuLimit.String(),
 		MemLimit:   memLimit.String(),
 	}
+}
+
+func containerGPUCount(container corev1.Container) int {
+	if gpu, ok := container.Resources.Requests[NVIDIAResourceGPU]; ok {
+		return int(gpu.Value())
+	}
+	if gpu, ok := container.Resources.Limits[NVIDIAResourceGPU]; ok {
+		return int(gpu.Value())
+	}
+	return 0
 }
 
 // CalculateNodeCost calculates the total cost for a node

@@ -2,6 +2,8 @@ package optimize
 
 import (
 	"fmt"
+	"sort"
+
 	"kcavo/pkg/cost"
 
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +27,13 @@ type Optimizer struct {
 func NewOptimizer() *Optimizer {
 	return &Optimizer{
 		pricing: cost.DefaultPricing(),
+	}
+}
+
+// NewOptimizerWithPricing creates an optimizer with custom pricing.
+func NewOptimizerWithPricing(pricing *cost.Pricing) *Optimizer {
+	return &Optimizer{
+		pricing: pricing,
 	}
 }
 
@@ -52,8 +61,9 @@ func (o *Optimizer) Analyze(pods []corev1.Pod, nodes []corev1.Node, costs []cost
 
 func (o *Optimizer) findOverProvisionedPods(pods []corev1.Pod, costs []cost.PodCost) []Recommendation {
 	recommendations := make([]Recommendation, 0)
+	costByPod := podCostByKey(costs)
 
-	for i, pod := range pods {
+	for _, pod := range pods {
 		if pod.Status.Phase != corev1.PodRunning {
 			continue
 		}
@@ -70,8 +80,8 @@ func (o *Optimizer) findOverProvisionedPods(pods []corev1.Pod, costs []cost.PodC
 
 			// Assume pods requesting >4 cores or >16GB might be over-provisioned
 			if cpuReq.AsApproximateFloat64() > 4.0 || memReq.Value() > 16*1024*1024*1024 {
-				if i < len(costs) {
-					savings := costs[i].TotalCost * 0.3 // Estimate 30% savings from rightsizing
+				if podCost, ok := costByPod[cost.PodKey(pod.Namespace, pod.Name)]; ok {
+					savings := podCost.TotalCost * 0.3 // Estimate 30% savings from rightsizing
 					recommendations = append(recommendations, Recommendation{
 						Title:       "Rightsize over-provisioned pod: " + pod.Name,
 						Description: "This pod requests significant resources. Consider rightsizing based on actual usage metrics.",
@@ -155,26 +165,31 @@ func (o *Optimizer) findUnusedResources(nodes []corev1.Node) []Recommendation {
 
 func (o *Optimizer) findExpensiveGPUUsage(pods []corev1.Pod, costs []cost.PodCost) []Recommendation {
 	recommendations := make([]Recommendation, 0)
+	costByPod := podCostByKey(costs)
 
-	for i, pod := range pods {
+	for _, pod := range pods {
 		if pod.Status.Phase != corev1.PodRunning {
 			continue
 		}
 
 		gpuCount := 0
 		for _, container := range pod.Spec.Containers {
-			if gpu, ok := container.Resources.Requests["nvidia.com/gpu"]; ok {
+			if gpu, ok := container.Resources.Requests[cost.NVIDIAResourceGPU]; ok {
+				gpuCount += int(gpu.Value())
+				continue
+			}
+			if gpu, ok := container.Resources.Limits[cost.NVIDIAResourceGPU]; ok {
 				gpuCount += int(gpu.Value())
 			}
 		}
 
-		if gpuCount > 0 && i < len(costs) {
+		if podCost, ok := costByPod[cost.PodKey(pod.Namespace, pod.Name)]; gpuCount > 0 && ok {
 			// If GPU cost is more than 70% of total, it's a significant expense
-			if costs[i].GPUCost > costs[i].TotalCost*0.7 {
+			if podCost.GPUCost > podCost.TotalCost*0.7 {
 				recommendations = append(recommendations, Recommendation{
 					Title:       "Review GPU usage for pod: " + pod.Name,
 					Description: "This pod uses GPUs which account for most of its cost. Ensure GPU is being utilized efficiently or consider spot instances.",
-					Savings:     costs[i].GPUCost * 0.5, // Estimate 50% savings with spot
+					Savings:     podCost.GPUCost * 0.5, // Estimate 50% savings with spot
 					Priority:    "High",
 					Category:    "GPU",
 				})
@@ -196,12 +211,15 @@ func (o *Optimizer) estimateNodeCost(node corev1.Node) float64 {
 }
 
 func sortRecommendationsBySavings(recommendations []Recommendation) {
-	// Simple bubble sort for small arrays
-	for i := 0; i < len(recommendations)-1; i++ {
-		for j := 0; j < len(recommendations)-i-1; j++ {
-			if recommendations[j].Savings < recommendations[j+1].Savings {
-				recommendations[j], recommendations[j+1] = recommendations[j+1], recommendations[j]
-			}
-		}
+	sort.SliceStable(recommendations, func(i, j int) bool {
+		return recommendations[i].Savings > recommendations[j].Savings
+	})
+}
+
+func podCostByKey(costs []cost.PodCost) map[string]cost.PodCost {
+	costByPod := make(map[string]cost.PodCost, len(costs))
+	for _, podCost := range costs {
+		costByPod[cost.PodKey(podCost.Namespace, podCost.Name)] = podCost
 	}
+	return costByPod
 }
