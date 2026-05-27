@@ -63,7 +63,7 @@ func PrintCostTable(costs []cost.PodCost, showBreakdown bool) {
 // PrintGPUTable prints GPU analysis in a table
 func PrintGPUTable(analysis gpu.Analysis) {
 	// Nodes table
-	fmt.Println("🖥️  GPU Nodes:")
+	fmt.Println("GPU Nodes:")
 	if len(analysis.Nodes) == 0 {
 		fmt.Println("   No GPU nodes found in cluster")
 		return
@@ -94,7 +94,7 @@ func PrintGPUTable(analysis gpu.Analysis) {
 
 	// Pods table
 	fmt.Println()
-	fmt.Println("🎮 GPU Pods:")
+	fmt.Println("GPU Pods:")
 	if len(analysis.Pods) == 0 {
 		fmt.Println("   No pods with GPU requests found")
 		return
@@ -119,7 +119,7 @@ func PrintGPUTable(analysis gpu.Analysis) {
 
 	// Summary
 	fmt.Println()
-	fmt.Printf("📊 GPU Summary:\n")
+	fmt.Println("GPU Summary:")
 	fmt.Printf("   Total GPUs: %d\n", analysis.TotalGPUs)
 	fmt.Printf("   Allocated: %d\n", analysis.AllocatedGPUs)
 	fmt.Printf("   Available: %d\n", analysis.AvailableGPUs)
@@ -128,7 +128,7 @@ func PrintGPUTable(analysis gpu.Analysis) {
 
 // PrintNodeTable prints nodes in a table
 func PrintNodeTable(nodes []corev1.Node) {
-	fmt.Println("🖥️  Nodes:")
+	fmt.Println("Nodes:")
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Name", "Status", "CPU", "Memory", "Pods"})
@@ -165,7 +165,7 @@ func PrintNodeTable(nodes []corev1.Node) {
 
 // PrintPodTable prints pods in a table
 func PrintPodTable(pods []corev1.Pod) {
-	fmt.Println("📦 Pods:")
+	fmt.Println("Pods:")
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Name", "Namespace", "Status", "Node", "CPU Request", "Memory Request"})

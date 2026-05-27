@@ -3,6 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
+
+	"kcavo/pkg/cost"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,6 +34,9 @@ Example usage:
   kubectl cost gpu                        # Analyze GPU usage
   kubectl cost optimize                   # Get optimization recommendations`,
 	Version: "1.0.0",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return validateOutputFormat(output)
+	},
 }
 
 func Execute() error {
@@ -56,10 +62,11 @@ func initConfig() {
 
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".kcavo")
+		viper.SetConfigName(".kubectl-cost")
 	}
 
 	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
@@ -73,4 +80,29 @@ func getNamespace() string {
 		return namespace
 	}
 	return "default"
+}
+
+func configuredPricing() *cost.Pricing {
+	switch strings.ToLower(viper.GetString("provider")) {
+	case "gcp":
+		return cost.GCPPricing()
+	case "azure":
+		return cost.AzurePricing()
+	default:
+		return cost.NewPricing(
+			viper.GetFloat64("pricing.cpu_hourly"),
+			viper.GetFloat64("pricing.memory_gb_hourly"),
+			viper.GetFloat64("pricing.gpu_hourly"),
+			viper.GetFloat64("pricing.storage_gb_monthly"),
+		)
+	}
+}
+
+func validateOutputFormat(format string) error {
+	switch format {
+	case "table", "json", "yaml":
+		return nil
+	default:
+		return fmt.Errorf("unsupported output format %q; use table, json, or yaml", format)
+	}
 }

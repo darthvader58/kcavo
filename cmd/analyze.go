@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"kcavo/pkg/cost"
 	"kcavo/pkg/kubernetes"
@@ -33,6 +34,9 @@ Examples:
   kubectl cost analyze -A                                 # Analyze all namespaces
   kubectl cost analyze -n production --breakdown         # Show detailed breakdown
   kubectl cost analyze --sort-by cost --top 10          # Top 10 most expensive`,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return validateSortField(sortBy)
+	},
 	RunE: runAnalyze,
 }
 
@@ -55,11 +59,13 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 
 	ns := getNamespace()
 
-	fmt.Printf("🔍 Analyzing costs")
-	if ns == "" {
-		fmt.Printf(" across all namespaces...\n")
-	} else {
-		fmt.Printf(" in namespace: %s...\n", ns)
+	if output == "table" {
+		fmt.Print("Analyzing costs")
+		if ns == "" {
+			fmt.Print(" across all namespaces...\n")
+		} else {
+			fmt.Printf(" in namespace: %s...\n", ns)
+		}
 	}
 
 	// Get pods
@@ -75,8 +81,9 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 
 	// Calculate costs
-	calculator := cost.NewCalculator()
+	calculator := cost.NewCalculatorWithPricing(configuredPricing())
 	results := calculator.CalculatePodCosts(pods, nodes)
+	sortPodCosts(results, sortBy)
 
 	// Apply filters
 	if topN > 0 && len(results) > topN {
@@ -111,12 +118,43 @@ func printSummary(results []cost.PodCost) {
 		totalGPU += r.GPUCount
 	}
 
-	fmt.Println("📊 Summary:")
+	fmt.Println("Summary:")
 	fmt.Printf("   Total Monthly Cost: $%.2f\n", totalCost)
 	fmt.Printf("   Total Pods: %d\n", len(results))
 	if totalGPU > 0 {
 		fmt.Printf("   Total GPUs: %d\n", totalGPU)
 	}
-	fmt.Printf("   CPU Cost: $%.2f (%.1f%%)\n", totalCPU, (totalCPU/totalCost)*100)
-	fmt.Printf("   Memory Cost: $%.2f (%.1f%%)\n", totalMemory, (totalMemory/totalCost)*100)
+	fmt.Printf("   CPU Cost: $%.2f (%.1f%%)\n", totalCPU, percentage(totalCPU, totalCost))
+	fmt.Printf("   Memory Cost: $%.2f (%.1f%%)\n", totalMemory, percentage(totalMemory, totalCost))
+}
+
+func sortPodCosts(results []cost.PodCost, field string) {
+	sort.SliceStable(results, func(i, j int) bool {
+		switch field {
+		case "cpu":
+			return results[i].CPUCost > results[j].CPUCost
+		case "memory":
+			return results[i].MemoryCost > results[j].MemoryCost
+		case "gpu":
+			return results[i].GPUCost > results[j].GPUCost
+		default:
+			return results[i].TotalCost > results[j].TotalCost
+		}
+	})
+}
+
+func validateSortField(field string) error {
+	switch field {
+	case "cost", "cpu", "memory", "gpu":
+		return nil
+	default:
+		return fmt.Errorf("unsupported sort field %q; use cost, cpu, memory, or gpu", field)
+	}
+}
+
+func percentage(part, total float64) float64 {
+	if total == 0 {
+		return 0
+	}
+	return (part / total) * 100
 }

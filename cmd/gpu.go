@@ -42,7 +42,10 @@ func runGPU(cmd *cobra.Command, args []string) error {
 
 	ns := getNamespace()
 
-	fmt.Printf("🎮 Analyzing GPU resources...\n\n")
+	if output == "table" {
+		fmt.Println("Analyzing GPU resources...")
+		fmt.Println()
+	}
 
 	// Get nodes with GPUs
 	nodes, err := client.GetNodes(ctx)
@@ -60,12 +63,19 @@ func runGPU(cmd *cobra.Command, args []string) error {
 	analyzer := gpu.NewAnalyzer()
 	analysis := analyzer.Analyze(nodes, pods)
 
+	switch output {
+	case "json":
+		return visualize.PrintJSON(analysis)
+	case "yaml":
+		return visualize.PrintYAML(analysis)
+	}
+
 	// Display results
 	visualize.PrintGPUTable(analysis)
 
 	// Print recommendations
 	fmt.Println()
-	fmt.Println("💡 Recommendations:")
+	fmt.Println("Recommendations:")
 	for i, rec := range analysis.Recommendations {
 		fmt.Printf("   %d. %s\n", i+1, rec)
 	}

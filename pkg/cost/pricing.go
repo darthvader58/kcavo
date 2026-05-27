@@ -1,5 +1,7 @@
 package cost
 
+const HoursPerMonth = 730.0
+
 // Pricing contains the pricing information for resources
 type Pricing struct {
 	CPUHourlyCost    float64 // Cost per CPU core per hour
@@ -17,6 +19,24 @@ func DefaultPricing() *Pricing {
 		GPUHourlyCost:    0.90,  // ~$648/month per GPU (T4)
 		StorageGBMonthly: 0.10,  // ~$0.10/month per GB (EBS gp3)
 	}
+}
+
+// NewPricing returns a pricing model, falling back to defaults for unset values.
+func NewPricing(cpuHourly, memoryGBHourly, gpuHourly, storageGBMonthly float64) *Pricing {
+	pricing := DefaultPricing()
+	if cpuHourly > 0 {
+		pricing.CPUHourlyCost = cpuHourly
+	}
+	if memoryGBHourly > 0 {
+		pricing.MemoryGBHourly = memoryGBHourly
+	}
+	if gpuHourly > 0 {
+		pricing.GPUHourlyCost = gpuHourly
+	}
+	if storageGBMonthly > 0 {
+		pricing.StorageGBMonthly = storageGBMonthly
+	}
+	return pricing
 }
 
 // GCPPricing returns Google Cloud pricing
@@ -41,21 +61,18 @@ func AzurePricing() *Pricing {
 
 // CalculateCPUCost calculates monthly cost for CPU cores
 func (p *Pricing) CalculateCPUCost(cores float64) float64 {
-	hoursPerMonth := 730.0 // Average hours in a month
-	return cores * p.CPUHourlyCost * hoursPerMonth
+	return cores * p.CPUHourlyCost * HoursPerMonth
 }
 
 // CalculateMemoryCost calculates monthly cost for memory
 func (p *Pricing) CalculateMemoryCost(bytes int64) float64 {
 	gb := float64(bytes) / (1024 * 1024 * 1024)
-	hoursPerMonth := 730.0
-	return gb * p.MemoryGBHourly * hoursPerMonth
+	return gb * p.MemoryGBHourly * HoursPerMonth
 }
 
 // CalculateGPUCost calculates monthly cost for GPUs
 func (p *Pricing) CalculateGPUCost(count int) float64 {
-	hoursPerMonth := 730.0
-	return float64(count) * p.GPUHourlyCost * hoursPerMonth
+	return float64(count) * p.GPUHourlyCost * HoursPerMonth
 }
 
 // CalculateStorageCost calculates monthly cost for storage

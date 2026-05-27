@@ -7,6 +7,7 @@ import (
 	"kcavo/pkg/cost"
 	"kcavo/pkg/kubernetes"
 	"kcavo/pkg/optimize"
+	viz "kcavo/pkg/visualize"
 
 	"github.com/spf13/cobra"
 )
@@ -43,7 +44,10 @@ func runOptimize(cmd *cobra.Command, args []string) error {
 
 	ns := getNamespace()
 
-	fmt.Printf("💰 Analyzing cluster for cost optimization opportunities...\n\n")
+	if output == "table" {
+		fmt.Println("Analyzing cluster for cost optimization opportunities...")
+		fmt.Println()
+	}
 
 	// Get resources
 	pods, err := client.GetPods(ctx, ns)
@@ -57,31 +61,39 @@ func runOptimize(cmd *cobra.Command, args []string) error {
 	}
 
 	// Calculate current costs
-	calculator := cost.NewCalculator()
+	pricing := configuredPricing()
+	calculator := cost.NewCalculatorWithPricing(pricing)
 	costs := calculator.CalculatePodCosts(pods, nodes)
 
 	// Get optimization recommendations
-	optimizer := optimize.NewOptimizer()
+	optimizer := optimize.NewOptimizerWithPricing(pricing)
 	recommendations := optimizer.Analyze(pods, nodes, costs)
 
+	switch output {
+	case "json":
+		return viz.PrintJSON(recommendations)
+	case "yaml":
+		return viz.PrintYAML(recommendations)
+	}
+
 	// Display recommendations
-	fmt.Println("📋 Optimization Recommendations:")
+	fmt.Println("Optimization Recommendations:")
 	fmt.Println()
 
 	totalSavings := 0.0
 	for i, rec := range recommendations {
 		fmt.Printf("   %d. %s\n", i+1, rec.Title)
-		fmt.Printf("      💡 %s\n", rec.Description)
-		fmt.Printf("      💵 Potential savings: $%.2f/month\n", rec.Savings)
-		fmt.Printf("      🎯 Priority: %s\n", rec.Priority)
+		fmt.Printf("      %s\n", rec.Description)
+		fmt.Printf("      Potential savings: $%.2f/month\n", rec.Savings)
+		fmt.Printf("      Priority: %s\n", rec.Priority)
 		fmt.Println()
 		totalSavings += rec.Savings
 	}
 
 	if len(recommendations) == 0 {
-		fmt.Println("   ✅ No optimization opportunities found. Your cluster is well-optimized!")
+		fmt.Println("   No optimization opportunities found.")
 	} else {
-		fmt.Printf("💰 Total Potential Savings: $%.2f/month (%.1f%% reduction)\n",
+		fmt.Printf("Total Potential Savings: $%.2f/month (%.1f%% reduction)\n",
 			totalSavings, calculateSavingsPercentage(costs, totalSavings))
 	}
 
