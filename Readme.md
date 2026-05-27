@@ -1,31 +1,46 @@
-# KCAVO - Kubernetes Cluster Analyse Visualize and Optimize
-A kubectl or Kubernetes Command Line Tool based plugin that visualizes resources, analyzes costs, and provides optimization recommendations. 
+# KCAVO
 
-## What it helps you with?
-- **Cost Analysis:** Calculate and visualize costs for pods, nodes, and resources
-- **GPU Analysis:** Specialized GPU resource tracking and optimization
-- **Resource Visualization:** View cluster resources in clean tables
-- **Smart Recommendations:** Get actionable cost-saving suggestions
+KCAVO is a `kubectl` plugin for Kubernetes cost visibility. It estimates monthly pod costs from resource requests, reports GPU allocation, and provides optimization recommendations from cluster state.
 
-## Install
+KCAVO is an estimator, not a billing system. It does not replace cloud billing exports, Prometheus usage metrics, or tools such as Kubecost/OpenCost. Its current estimates are based on Kubernetes resource requests, falling back to limits when requests are missing.
+
+## Features
+
+- Cost estimates for running pods based on CPU, memory, and GPU requests
+- Cluster resource tables for pods and nodes
+- GPU allocation summaries by node and pod
+- Optimization checks for missing requests, large requests, underused nodes, and GPU-heavy workloads
+- Table, JSON, and YAML output
+- Configurable pricing with provider presets
+
+## Installation
+
 ```bash
 make install
 kubectl cost --version
 ```
 
+`make install` builds and installs the plugin as `kubectl-cost` in `~/.local/bin`. Make sure `~/.local/bin` is on your `PATH`.
+
 ## Quick Start
 
 ```bash
-# Analyze costs in current namespace
+# Analyze costs in the current namespace
 kubectl cost analyze
 
-# Analyze across all namespaces
+# Analyze all namespaces
 kubectl cost analyze --all-namespaces
 
-# Visualize cluster resources
+# Show detailed cost columns
+kubectl cost analyze --breakdown
+
+# Show the top 10 pods by estimated monthly cost
+kubectl cost analyze --top 10 --sort-by cost
+
+# Visualize pods and nodes
 kubectl cost visualize
 
-# Analyze GPU usage
+# Analyze GPU allocation
 kubectl cost gpu
 
 # Get optimization recommendations
@@ -36,95 +51,91 @@ kubectl cost optimize
 
 ### `kubectl cost analyze`
 
-Analyze costs for pods and resources in your cluster.
+Estimates monthly cost for running pods.
 
 ```bash
-# Basic usage
 kubectl cost analyze
-
-# Across all namespaces
 kubectl cost analyze -A
-
-# With proper breakdown
-kubectl cost analyze --breakdown
-
-# Show top 10 expensive
-kubectl cost analyze --top 10 --sort-by cost
-
-# Different output formats
+kubectl cost analyze -n production --breakdown
+kubectl cost analyze --sort-by cpu --top 10
 kubectl cost analyze -o json
 kubectl cost analyze -o yaml
 ```
 
+Supported sort fields: `cost`, `cpu`, `memory`, `gpu`.
+
 ### `kubectl cost visualize`
 
-Visualize Kubernetes resources in table format.
+Prints cluster resource tables.
 
 ```bash
-# Visualize all resources
 kubectl cost visualize
-
-# Specific resource type
 kubectl cost visualize --type pods
 kubectl cost visualize --type nodes
-
-# All namespaces
 kubectl cost visualize -A
 ```
 
 ### `kubectl cost gpu`
 
-Analyze GPU resource allocation and usage.
+Shows GPU capacity, scheduled GPU requests, available GPUs, and GPU pods.
 
 ```bash
-# Analyze GPU usage
 kubectl cost gpu
-
-# All namespaces
 kubectl cost gpu -A
 ```
 
 ### `kubectl cost optimize`
 
-Get cost optimization recommendations.
+Generates lightweight recommendations from Kubernetes resource specs.
 
 ```bash
-# Get recommendations
 kubectl cost optimize
-
-# All namespaces
 kubectl cost optimize -A
 ```
 
 ## Configuration
 
-Create `~/.kubectl-cost.yaml` to customize pricing or use existing cloud providers' pricing:
+Create `~/.kubectl-cost.yaml` to customize pricing:
 
 ```yaml
 pricing:
-  cpu_hourly: 0.024           # $17.28/month per core
-  memory_gb_hourly: 0.003     # $2.16/month per GB
-  gpu_hourly: 0.90            # $648/month per GPU
-  storage_gb_monthly: 0.10    # $0.10/month per GB
-
-# Or use cloud provider presets
-provider: aws  # aws, gcp, or azure
+  cpu_hourly: 0.024
+  memory_gb_hourly: 0.003
+  gpu_hourly: 0.90
+  storage_gb_monthly: 0.10
 ```
 
-## Calculation for Costs
+You can also use a provider preset:
 
-Costs are calculated based on:
-- **CPU**: Resource requests (or limits if requests not set)
-- **Memory**: Resource requests (or limits if requests not set)
-- **GPU**: GPU resource requests
-- **Time**: Monthly basis (730 hours/month)
-
-Formula:
+```yaml
+provider: gcp # aws, gcp, or azure
 ```
-Monthly Cost = (CPU_cores × CPU_rate + Memory_GB × Memory_rate + GPU_count × GPU_rate) × 730_hours
+
+The default pricing is AWS-like. For production reporting, replace these values with your actual blended or negotiated rates.
+
+## Cost Model
+
+KCAVO calculates estimated monthly cost as:
+
+```text
+Monthly cost = (CPU cores * CPU hourly rate + memory GiB * memory hourly rate + GPUs * GPU hourly rate) * 730
+```
+
+Resource selection rules:
+
+- CPU and memory use requests first, then limits if requests are unset.
+- GPU uses `nvidia.com/gpu` requests first, then limits if requests are unset.
+- Only running pods are included in pod cost estimates.
+
+## Development
+
+```bash
+make fmt
+make test
+make build
 ```
 
 ## Acknowledgements
-- https://github.com/spf13/cobra for CLI.
-- https://github.com/olekukonko/tablewriter for the tables.
 
+- [Cobra](https://github.com/spf13/cobra) for the CLI framework
+- [tablewriter](https://github.com/olekukonko/tablewriter) for terminal tables
