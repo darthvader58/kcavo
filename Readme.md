@@ -2,7 +2,12 @@
 
 KCAVO is a `kubectl` plugin for Kubernetes cost visibility. It estimates monthly pod costs from resource requests, reports GPU allocation, and provides optimization recommendations from cluster state.
 
-KCAVO is an estimator, not a billing system. It does not replace cloud billing exports, Prometheus usage metrics, or tools such as Kubecost/OpenCost. Its current estimates are based on Kubernetes resource requests, falling back to limits when requests are missing.
+KCAVO works with only `kubectl` access — no Prometheus, no Helm, no in-cluster agents. 
+Just point it at a cluster and get cost estimates in seconds.
+
+This plugin is an estimator, not a billing system. Estimates are based on Kubernetes resource 
+requests (falling back to limits when requests are unset), and are not a substitute for 
+cloud billing exports or metrics-backed tools like Kubecost/OpenCost.
 
 ## Features
 
@@ -139,3 +144,5 @@ make build
 
 - [Cobra](https://github.com/spf13/cobra) for the CLI framework
 - [tablewriter](https://github.com/olekukonko/tablewriter) for terminal tables
+
+Made with <3 by [Shashwat Raj](shashwatraj.com)
